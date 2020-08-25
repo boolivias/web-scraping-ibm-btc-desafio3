@@ -1,0 +1,23 @@
+{
+  "name": "web-scraping-ibm-btc-desafio3",
+  "version": "1.0.0",
+  "description": "A web scraping code to create a JSON file to train Watson Discovery on the IBM Cloud for the purpose of completing challenge #3 of the IBM - Behind The Code 2020 marathon.  Challenge link: https://github.com/maratonadev-br/desafio-3-2020",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/boolivias/web-scraping-ibm-btc-desafio3.git"
+  },
+  "keywords": [],
+  "author": "Jean Wylmer",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/boolivias/web-scraping-ibm-btc-desafio3/issues"
+  },
+  "homepage": "https://github.com/boolivias/web-scraping-ibm-btc-desafio3#readme",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.3"
+  }
+}

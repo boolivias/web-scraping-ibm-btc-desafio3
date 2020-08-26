@@ -2,17 +2,15 @@ const http = require('https');
 const cheerio = require('cheerio');
 const fs = require('fs');
 
-//const url = new URL('https://www.startse.com/noticia/startups/mobtech/deep-learning-o-cerebro-dos-carros-autonomos');
-const url = new URL('https://olhardigital.com.br/colunistas/wagner_sanchez/post/os_riscos_do_machine_learning/80584');
-//const url = new URL('https://www.ted.com/talks/tom_gruber_how_ai_can_enhance_our_memory_work_and_social_lives/transcript?language=pt-br');
-
 const getPageItems = (html) => {
     const $ = cheerio.load(html);
     let url = $('meta[property="og:url"]').attr('content');
     let author = '';
     let bodyText = '';
+    let type = 'article'
     if( url.search('ted.com') !== -1 ){
         author = $('meta[name="author"]').attr('content');
+        type = 'video'
         $('.Grid__cell p').each( (index, element) => {
             bodyText += $(element).text();
         })
@@ -34,7 +32,7 @@ const getPageItems = (html) => {
         'author' : author,
         'body' : bodyText,
         'title' : $('meta[property="og:title"]').attr('content'),
-        'type' : $('meta[property="og:type"]').attr('content').replace('.other',''),
+        'type' : type,
         'url' : url
     };    
 }
@@ -55,7 +53,7 @@ const createFileJSON = (html) => {
     });
 }
 
-http.get(url, (res) => {
+const callbackRequest = (res) => {
     if( res.statusCode != 200){
         let error = new Error(`Falha na requisição\nStatus Code: ${res.statusCode}`);
         console.log(error.message);
@@ -74,4 +72,13 @@ http.get(url, (res) => {
     res.on('end', () => {
         createFileJSON(html);
     })
-});
+};
+
+const readFileTXT = (url) => {
+    let bodyFile = fs.readFileSync(url , {encoding: 'utf-8', flag: 'r'});
+    return bodyFile.split(/[\r\n]+/g);
+}
+
+for (const url of readFileTXT('lista-sites.txt')) {
+    http.get(url, callbackRequest);
+}

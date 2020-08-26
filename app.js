@@ -1,8 +1,9 @@
 const http = require('https');
-const cheerio = require('cheerio')
+const cheerio = require('cheerio');
+const fs = require('fs');
 
-const url = new URL('https://www.startse.com/noticia/startups/mobtech/deep-learning-o-cerebro-dos-carros-autonomos');
-//const url = new URL('https://olhardigital.com.br/colunistas/wagner_sanchez/post/os_riscos_do_machine_learning/80584');
+//const url = new URL('https://www.startse.com/noticia/startups/mobtech/deep-learning-o-cerebro-dos-carros-autonomos');
+const url = new URL('https://olhardigital.com.br/colunistas/wagner_sanchez/post/os_riscos_do_machine_learning/80584');
 //const url = new URL('https://www.ted.com/talks/tom_gruber_how_ai_can_enhance_our_memory_work_and_social_lives/transcript?language=pt-br');
 
 const getPageItems = (html) => {
@@ -15,15 +16,10 @@ const getPageItems = (html) => {
         $('.Grid__cell p').each( (index, element) => {
             bodyText += $(element).text();
         })
+        bodyText = bodyText.replace(/[\t\n]+/g,' ');
     }else if ( url.search('olhardigital.com') !== -1 ) {
         author = $('.meta-aut').text();
-
-        //No html, há uma marcação de JSON-LD onde há uma key "articleBody" em que recebe todo o texto do artigo
-        //Então como o parâmetro html é uma string, bodyText recebe um "corte" dela, a partir do começo de value da key "articleBody"
-        bodyText = html.slice(html.search("articleBody")+16)
-
-        //String é "cortada" novamente, agora em uma quebra de linha, ficando somente o texto do artigo
-        bodyText = bodyText.slice(0, bodyText.search('\\n')-3);
+        bodyText = $('.mat-txt > p').text();
     }else{
         author = $('.title-single__info__author__about__name a').text();
         $('.content-single__sidebar-content__content span').each( (index, element) => {
@@ -37,29 +33,40 @@ const getPageItems = (html) => {
     return {
         'author' : author,
         'body' : bodyText,
-        'title' : $('meta[property="og:type"]').attr('content').replace('.other',''),
-        'type' : $('meta[property="og:title"]').attr('content'),
+        'title' : $('meta[property="og:title"]').attr('content'),
+        'type' : $('meta[property="og:type"]').attr('content').replace('.other',''),
         'url' : url
     };    
 }
 
+const formatNameFile = (title) => {
+    let name = title.normalize("NFD").toLowerCase();
+    name = name.replace(/[-!@—_#$%^&*(),.?:{}|<>\u0300-\u036f]/g, '');
+    name = name.replace(/\W/g,'-') + '.json';
+    return name;
+}
+
 const createFileJSON = (html) => {
-    console.log(getPageItems(html));
+    let obj = getPageItems(html);
+    let nameFile = formatNameFile(obj['title']);
+    fs.writeFile("./json/"+nameFile, JSON.stringify(obj, null, 2), (e) => {
+        if( e )
+            return console.log(`Ocorreu um erro ao criar o arquivo JSON\n${e.message}`);
+    });
 }
 
 http.get(url, (res) => {
-    let error;
     if( res.statusCode != 200){
-        error = new Error(`Falha na requisição\nStatus Code: ${res.statusCode}`);
-    }
-    if (error){
+        let error = new Error(`Falha na requisição\nStatus Code: ${res.statusCode}`);
         console.log(error.message);
         res.resume();
         return;
     }
-
     let html = '';
-    res.setEncoding('utf8');
+    if( res.headers['content-type'].search('ISO-8859-1') !== -1 )
+        res.setEncoding('latin1');
+    else
+        res.setEncoding('utf-8');
     res.on('data', (chunk) => {
         html += chunk;
     })

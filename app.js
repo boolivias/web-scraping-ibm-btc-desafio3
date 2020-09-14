@@ -2,31 +2,78 @@ const http = require('https');
 const cheerio = require('cheerio');
 const fs = require('fs');
 
+const getIdSite = (url) =>{
+    if( url.search('ted.com') !== -1 )
+        return 'TED';
+    else if ( url.search('olhardigital.com') !== -1 ) 
+        return 'OLHARDIGITAL';
+    else
+        return 'STARTSE';
+}
+
+const getBodyText = {
+    'TED' : 
+        ($) => {
+            let bodyText = '';
+            $('.Grid__cell p').each( (index, element) => {
+                bodyText += $(element).text();
+            })
+            bodyText = bodyText.replace(/[\t\n]+/g,' ');
+            return bodyText;
+        },
+    'OLHARDIGITAL' : 
+        ($) => {
+            return $('.mat-txt > p').text();
+        },
+    'STARTSE' :
+        ($) => {
+            let bodyText = '';
+            $('.content-single__sidebar-content__content span').each( (index, element) => {
+                //não concatena o elemento que tiver um filho com a tag <em>, pois não faz parte do texto do artigo
+                if( !$(element).find('em').length )
+                    bodyText += $(element).text();
+            });
+            return bodyText;
+        }
+}
+
+const getAuthor = {
+    'TED' :
+        ($) => {
+            return $('meta[name="author"]').attr('content');
+        },
+    'OLHARDIGITAL' : 
+        ($) => {
+            return $('.meta-aut').text();
+        },
+    'STARTSE' :
+        ($) => {
+            return author = $('.title-single__info__author__about__name a').text();
+        }
+}
+
+const getType = {
+    'TED' :
+        () => {
+            return 'video';
+        },
+    'OLHARDIGITAL' :
+        () => {
+            return 'article';
+        },
+    'STARTSE' :
+        () => {
+            return 'article';
+        }
+}
+
 const getPageItems = (html) => {
     const $ = cheerio.load(html);
     let url = $('meta[property="og:url"]').attr('content');
-    let author = '';
-    let bodyText = '';
-    let type = 'article'
-    if( url.search('ted.com') !== -1 ){
-        author = $('meta[name="author"]').attr('content');
-        type = 'video'
-        $('.Grid__cell p').each( (index, element) => {
-            bodyText += $(element).text();
-        })
-        bodyText = bodyText.replace(/[\t\n]+/g,' ');
-    }else if ( url.search('olhardigital.com') !== -1 ) {
-        author = $('.meta-aut').text();
-        bodyText = $('.mat-txt > p').text();
-    }else{
-        author = $('.title-single__info__author__about__name a').text();
-        $('.content-single__sidebar-content__content span').each( (index, element) => {
-
-            //não concatena o elemento que tiver um filho com a tag <em>, pois não faz parte do texto do artigo
-            if( !$(element).find('em').length )
-                bodyText += $(element).text()
-        })
-    }
+    let siteName = getIdSite(url);
+    let author = getAuthor[siteName]($);
+    let bodyText = getBodyText[siteName]($);
+    let type = getType[siteName]();
     
     return {
         'author' : author,
@@ -60,6 +107,7 @@ const callbackRequest = (res) => {
         res.resume();
         return;
     }
+
     let html = '';
     if( res.headers['content-type'].search('ISO-8859-1') !== -1 )
         res.setEncoding('latin1');
@@ -79,6 +127,6 @@ const readFileTXT = (url) => {
     return bodyFile.split(/[\r\n]+/g);
 }
 
-for (const url of readFileTXT('lista-sites.txt')) {
+for (const url of readFileTXT('list-sites.txt')) {
     http.get(url, callbackRequest);
 }
